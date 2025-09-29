@@ -80,12 +80,13 @@ jobs:
           rclone lsd onedrive: || { echo "onedrive remote not working"; exit 1; }
 
       # 5) OneDrive에 같은 파일명으로 덮어쓰기 업로드
-      - name: Upload to OneDrive (overwrite)
-        env:
-          TARGET_DIR: "Reports"                  # 원드라이브 폴더(없으면 자동 생성)
-          TARGET_FILE: "bigquery_export.csv"     # 항상 같은 파일명 → 엑셀 연결 고정
-        run: |
-          rclone copyto /tmp/export/bq_export.csv "onedrive:${TARGET_DIR}/${TARGET_FILE}" -P
+          - name: Upload to OneDrive (overwrite)
+      env:
+        TARGET_DIR: "Reports"                  # 원드라이브 폴더
+        TARGET_FILE: "bigquery_export.csv"     # 항상 같은 파일명
+      run: |
+        rclone copyto /tmp/export/bq_export.csv "onedrive:${TARGET_DIR}/${TARGET_FILE}" -P
+
 
       # 파일이 잘 만들어졌는지 확인
             - name: Check row count & size
