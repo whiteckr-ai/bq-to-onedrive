@@ -33,6 +33,24 @@ jobs:
           gcloud auth list
           gcloud config list
 
+      - name: Smoke test - list datasets
+        run: |
+          bq --project_id="${{ secrets.GCP_PROJECT_ID }}" --location=asia-northeast3 ls
+
+      - name: Smoke test - show dataset
+        run: |
+          bq --project_id="${{ secrets.GCP_PROJECT_ID }}" --location=asia-northeast3 show raw_data
+
+      - name: Smoke test - run SELECT 1
+        run: |
+          bq query \
+            --project_id="${{ secrets.GCP_PROJECT_ID }}" \
+            --location=asia-northeast3 \
+            --nouse_legacy_sql \
+            --format=csv \
+            "SELECT 1 AS ok"
+
+
       # 3) BigQuery → CSV
       - name: Export BigQuery result to CSV
         env:
