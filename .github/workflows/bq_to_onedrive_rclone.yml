@@ -55,6 +55,8 @@ jobs:
             --project_id="${{ secrets.GCP_PROJECT_ID }}" \
             --location=asia-northeast3 \
             --nouse_legacy_sql \
+            --quiet \
+            --max_rows=0 \
             --format=csv \
             < /tmp/query.sql > /tmp/export/bq_export.csv
 
