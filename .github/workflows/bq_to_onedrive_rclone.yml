@@ -87,6 +87,25 @@ jobs:
         run: |
           rclone copyto /tmp/export/bq_export.csv "onedrive:${TARGET_DIR}/${TARGET_FILE}" -P
 
+      # 파일이 잘 만들어졌는지 확인
+            - name: Check row count & size
+        run: |
+            ls -l /tmp/export/bq_export.csv || true
+            echo "Line count (including header):"
+            wc -l /tmp/export/bq_export.csv || true
+            echo "Head:"
+            head -n 3 /tmp/export/bq_export.csv || true
+            echo "Tail:"
+            tail -n 3 /tmp/export/bq_export.csv || true
+
+      - name: Upload CSV artifact (for inspection)
+        uses: actions/upload-artifact@v4
+        with:
+          name: bq_export_from_action
+          path: /tmp/export/bq_export.csv
+
+    
+
       # (선택) 날짜 백업도 남기고 싶다면 아래 주석 해제
       # - name: Upload dated backup (optional)
       #   run: |
