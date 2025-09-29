@@ -49,40 +49,26 @@ jobs:
           BQ_SQL: ${{ secrets.BQ_SQL }}
         run: |
           set -euo pipefail
-
-          # 0) 쿼리 유효성 검사
           if [ -z "${BQ_SQL:-}" ]; then
-            echo "ERROR: BQ_SQL secret is empty."
-            exit 1
+            echo "ERROR: BQ_SQL secret is empty."; exit 1
           fi
-
-          # 1) 쿼리를 파일로 저장하고 길이/미리보기는 안전하게만 출력
           printf '%s' "$BQ_SQL" > /tmp/query.sql
-          echo "Query bytes:"
-          wc -c /tmp/query.sql || true
-          echo "Query preview (first 120 chars, redacted):"
-          head -c 120 /tmp/query.sql | sed 's/./*/g' || true
-          echo
-
-          # 2) bq 실행 (에러 메시지 확인 위해 --quiet 제거), 출력은 tee로 파일에 확실히 저장
           mkdir -p /tmp/export
           bq query \
             --project_id="${{ secrets.GCP_PROJECT_ID }}" \
             --location=asia-northeast3 \
             --nouse_legacy_sql \
             --format=csv \
-            --max_rows=0 \
+            --max_rows=1000000000 \
             < /tmp/query.sql | tee /tmp/export/bq_export.csv > /dev/null
 
-          # 3) 결과 점검
-          echo "=== Result file stats ==="
+      - name: Check row count & size
+        run: |
           ls -l /tmp/export/bq_export.csv || true
           echo "Line count (including header):"
           wc -l /tmp/export/bq_export.csv || true
-          echo "Head:"
-          head -n 3 /tmp/export/bq_export.csv || true
-          echo "Tail:"
-          tail -n 3 /tmp/export/bq_export.csv || true
+          echo "Head:"; head -n 3 /tmp/export/bq_export.csv || true
+          echo "Tail:"; tail -n 3 /tmp/export/bq_export.csv || true
 
 
       # (선택) 엑셀 한글 깨짐 방지: UTF-8 BOM 추가
