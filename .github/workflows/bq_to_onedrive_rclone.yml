@@ -1,9 +1,9 @@
 name: bq-to-onedrive-csv (rclone)
 
 on:
-  schedule:
-    - cron: "45 * * * *"      # 자동 실행(UTC). 테스트만 할거면 아래 workflow_dispatch만 써도 됨
   workflow_dispatch: {}
+  schedule:
+    - cron: "45 * * * *"
 
 jobs:
   export-and-upload:
@@ -11,18 +11,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # gcloud / bq 설치
-      - uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-          install_components: "bq"
-
-      # GCP 인증
-      - uses: google-github-actions/auth@v2
+      # 1) 먼저 '인증'을 한다 (SERVICE_ACCOUNT_JSON 사용)
+      - name: Auth to GCP
+        id: auth
+        uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.SERVICE_ACCOUNT_JSON }}
 
-      # BigQuery → CSV
+      # 2) 그 다음 gcloud/bq 설치 (auth 뒤에 와야 함)
+      - name: Install gcloud & bq
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          install_components: bq
+
+      # (optional) 진단용: gcloud/bq 버전 및 인증 상태 확인
+      - name: Check gcloud/bq
+        run: |
+          gcloud --version
+          bq version
+          gcloud auth list
+          gcloud config list
+
+      # 3) BigQuery → CSV
       - name: Export BigQuery result to CSV
         env:
           BQ_SQL: ${{ secrets.BQ_SQL }}
@@ -35,7 +46,7 @@ jobs:
             --format=csv \
             "${BQ_SQL}" > /tmp/export/bq_export.csv
 
-      # (선택) 한글 깨짐 방지
+      # 4) (선택) 엑셀 한글 깨짐 방지
       - name: Add UTF-8 BOM (optional)
         run: |
           python - << 'PY'
@@ -44,7 +55,7 @@ jobs:
           open(p,"wb").write(b'\xef\xbb\xbf'+d if not d.startswith(b'\xef\xbb\xbf') else d)
           PY
 
-      # rclone 설치 + 설정 주입
+      # 5) rclone 설치 + 설정 주입
       - name: Install rclone and inject config
         run: |
           curl -fsSL https://rclone.org/install.sh | sudo bash
@@ -52,10 +63,10 @@ jobs:
           printf "%s" "${{ secrets.RCLONE_CONFIG }}" > ~/.config/rclone/rclone.conf
           rclone version
 
-      # OneDrive에 같은 이름으로 덮어쓰기
+      # 6) OneDrive에 같은 파일명으로 '덮어쓰기'
       - name: Upload to OneDrive (overwrite)
         env:
-          TARGET_DIR: "Reports"                 # 원드라이브 폴더(없으면 자동 생성)
-          TARGET_FILE: "bigquery_export.csv"    # 항상 같은 파일명
+          TARGET_DIR: "Reports"
+          TARGET_FILE: "bigquery_export.csv"
         run: |
           rclone copyto /tmp/export/bq_export.csv "onedrive:${TARGET_DIR}/${TARGET_FILE}" -P
