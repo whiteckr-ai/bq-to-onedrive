@@ -79,14 +79,31 @@ jobs:
           # 원격 연결 테스트(에러 시 바로 종료)
           rclone lsd onedrive: || { echo "onedrive remote not working"; exit 1; }
 
+      # 4.1) 결과 파일 확인 (행 개수, 앞/뒤 미리보기)
+      - name: Check row count & size
+        run: |
+          ls -l /tmp/export/bq_export.csv || true
+          echo "Line count (including header):"
+          wc -l /tmp/export/bq_export.csv || true
+          echo "Head:"
+          head -n 3 /tmp/export/bq_export.csv || true
+          echo "Tail:"
+          tail -n 3 /tmp/export/bq_export.csv || true
+
+      # 4.2) CSV 아티팩트 업로드 (워크플로우 실행 결과에서 다운로드 가능)
+      - name: Upload CSV artifact (for inspection)
+        uses: actions/upload-artifact@v4
+        with:
+          name: bq_export_from_action
+          path: /tmp/export/bq_export.csv
+
       # 5) OneDrive에 같은 파일명으로 덮어쓰기 업로드
       - name: Upload to OneDrive (overwrite)
-      env:
-        TARGET_DIR: "Reports"                  # 원드라이브 폴더
-        TARGET_FILE: "bigquery_export.csv"     # 항상 같은 파일명
-      run: |
-        rclone copyto /tmp/export/bq_export.csv "onedrive:${TARGET_DIR}/${TARGET_FILE}" -P
-
+        env:
+          TARGET_DIR: "Reports"                  # 원드라이브 폴더
+          TARGET_FILE: "bigquery_export.csv"     # 항상 같은 파일명
+        run: |
+          rclone copyto /tmp/export/bq_export.csv "onedrive:${TARGET_DIR}/${TARGET_FILE}" -P
 
       # (선택) 날짜 백업도 남기고 싶다면 아래 주석 해제
       # - name: Upload dated backup (optional)
