@@ -76,26 +76,46 @@ jobs:
           pip install --quiet pandas openpyxl
           python - <<'PY'
           import pandas as pd, re
+          from openpyxl import Workbook
+          from openpyxl.utils.dataframe import dataframe_to_rows
+          from openpyxl.styles import numbers
 
           src = "/tmp/export/bq_export.csv"
           dst = "/tmp/export/bq_export.xlsx"
 
-          # CSV 읽기 (문자형으로 읽고 메모리 경고 방지)
+          # CSV → DataFrame (모두 문자열로 읽음)
           df = pd.read_csv(src, dtype=str, encoding="utf-8-sig", low_memory=False)
-
-          # NaN -> "" (문자 처리 쉽게)
           df = df.fillna("")
 
-          # Excel에서 금지된 제어문자 제거: \x00-\x08 \x0B \x0C \x0E-\x1F
+          # 제어문자 제거
           illegal = re.compile(r"[\x00-\x08\x0B\x0C\x0E-\x1F]")
           df = df.applymap(lambda v: illegal.sub("", v) if isinstance(v, str) else v)
 
-          # 시트명은 안전하게 고정 (31자 제한/특수문자 제한 회피)
-          with pd.ExcelWriter(dst, engine="openpyxl") as w:
-              df.to_excel(w, index=False, sheet_name="Sheet1")
-          print("Saved:", dst)
+          # DataFrame → Excel 워크북
+          wb = Workbook()
+          ws = wb.active
+          ws.title = "Sheet1"
+
+          for r in dataframe_to_rows(df, index=False, header=True):
+              ws.append(r)
+
+          # 숫자로 변환 시도 후 '일반' 서식 적용할 열들
+          target_cols = ["B"] + [chr(c) for c in range(ord("H"), ord("R")+1)]
+          for col in target_cols:
+              for cell in ws[col]:
+                  if cell.row == 1:
+                      continue  # 헤더는 건너뜀
+                  try:
+                      cell.value = float(cell.value)
+                      cell.number_format = numbers.FORMAT_GENERAL
+                  except:
+                      pass  # 숫자 변환 안 되면 그대로 둠 (텍스트 유지)
+
+          wb.save(dst)
+          print("Saved with B, H~R columns as General:", dst)
           PY
           ls -l /tmp/export/bq_export.xlsx
+
 
 
       # 4) rclone 설치 + config 주입
