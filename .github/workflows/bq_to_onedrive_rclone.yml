@@ -1,9 +1,9 @@
-name: bq-to-onedrive-csv (rclone)
+name: bq-to-onedrive-xlsx (rclone)
 
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "45 * * * *"     # 필요시 조정하세요 (UTC)
+    - cron: "45 * * * *"   # UTC 기준, 필요시 조정
 
 jobs:
   export-and-upload:
@@ -11,21 +11,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 1) GCP 인증 (서비스 계정 JSON)
+      # 1) GCP 인증
       - name: Auth to GCP
         id: auth
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.SERVICE_ACCOUNT_JSON }}
 
-      # 2) gcloud/bq 설치 (auth 뒤에!)
+      # 2) gcloud/bq 설치
       - name: Install gcloud & bq
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
           install_components: bq
 
-      # (선택) 진단용
+      # (선택) 진단
       - name: Check gcloud/bq
         run: |
           gcloud --version
@@ -33,7 +33,7 @@ jobs:
           gcloud auth list
           gcloud config list
 
-      # (선택) 스모크 테스트 - 권한/리전 빠르게 검증
+      # (선택) 스모크 테스트
       - name: Smoke test - SELECT 1
         run: |
           bq query \
@@ -62,7 +62,7 @@ jobs:
             --max_rows=1000000000 \
             < /tmp/query.sql | tee /tmp/export/bq_export.csv > /dev/null
 
-      - name: Check row count & size
+      - name: Check CSV row count & size
         run: |
           ls -l /tmp/export/bq_export.csv || true
           echo "Line count (including header):"
@@ -70,54 +70,37 @@ jobs:
           echo "Head:"; head -n 3 /tmp/export/bq_export.csv || true
           echo "Tail:"; tail -n 3 /tmp/export/bq_export.csv || true
 
-
-      # (선택) 엑셀 한글 깨짐 방지: UTF-8 BOM 추가
-      - name: Add UTF-8 BOM (optional)
+      # 3-1) CSV → XLSX 변환
+      - name: Convert CSV to Excel (XLSX)
         run: |
-          python - << 'PY'
-          p="/tmp/export/bq_export.csv"
-          d=open(p,"rb").read()
-          open(p,"wb").write(b'\xef\xbb\xbf'+d if not d.startswith(b'\xef\xbb\xbf') else d)
+          pip install --quiet pandas openpyxl
+          python - <<'PY'
+          import pandas as pd
+          df = pd.read_csv("/tmp/export/bq_export.csv")
+          df.to_excel("/tmp/export/bq_export.xlsx", index=False)
           PY
+          ls -l /tmp/export/bq_export.xlsx
 
-      # 4) rclone 설치 + base64로 받은 config 주입
+      # 4) rclone 설치 + config 주입
       - name: Install rclone and inject config
         run: |
           curl -fsSL https://rclone.org/install.sh | sudo bash
           mkdir -p ~/.config/rclone
           echo "${{ secrets.RCLONE_CONFIG_B64 }}" | base64 -d > ~/.config/rclone/rclone.conf
           rclone version
-          # 원격 연결 테스트(에러 시 바로 종료)
           rclone lsd onedrive: || { echo "onedrive remote not working"; exit 1; }
 
-      # 4.1) 결과 파일 확인 (행 개수, 앞/뒤 미리보기)
-      - name: Check row count & size
-        run: |
-          ls -l /tmp/export/bq_export.csv || true
-          echo "Line count (including header):"
-          wc -l /tmp/export/bq_export.csv || true
-          echo "Head:"
-          head -n 3 /tmp/export/bq_export.csv || true
-          echo "Tail:"
-          tail -n 3 /tmp/export/bq_export.csv || true
-
-      # 4.2) CSV 아티팩트 업로드 (워크플로우 실행 결과에서 다운로드 가능)
-      - name: Upload CSV artifact (for inspection)
+      # (선택) 결과 파일 아티팩트 업로드
+      - name: Upload XLSX artifact (for inspection)
         uses: actions/upload-artifact@v4
         with:
-          name: bq_export_from_action
-          path: /tmp/export/bq_export.csv
+          name: bq_export_xlsx_from_action
+          path: /tmp/export/bq_export.xlsx
 
-      # 5) OneDrive에 같은 파일명으로 덮어쓰기 업로드
+      # 5) OneDrive 공유 폴더로 업로드(덮어쓰기)
       - name: Upload to OneDrive (overwrite)
         env:
-          TARGET_DIR: "바탕 화면 1/raw data"                  # 원드라이브 폴더
-          TARGET_FILE: "bigquery_export.csv"     # 항상 같은 파일명
+          TARGET_DIR: "바탕 화면 1/raw data"    # 공유받은 폴더 경로 (슬래시 / 사용)
+          TARGET_FILE: "bigquery_export.xlsx"
         run: |
-          rclone copyto /tmp/export/bq_export.csv "onedrive:${TARGET_DIR}/${TARGET_FILE}" -P
-
-      # (선택) 날짜 백업도 남기고 싶다면 아래 주석 해제
-      # - name: Upload dated backup (optional)
-      #   run: |
-      #     dt=$(date +%Y%m%d)
-      #     rclone copyto /tmp/export/bq_export.csv "onedrive:Reports/bq_export_${dt}.csv" -P
+          rclone copyto /tmp/export/bq_export.xlsx "onedrive:${TARGET_DIR}/${TARGET_FILE}" -P
