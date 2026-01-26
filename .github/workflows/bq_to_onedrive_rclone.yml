@@ -89,7 +89,7 @@ jobs:
 
           # 제어문자 제거
           illegal = re.compile(r"[\x00-\x08\x0B\x0C\x0E-\x1F]")
-          df = df.applymap(lambda v: illegal.sub("", v) if isinstance(v, str) else v)
+          df = df.map(lambda v: illegal.sub("", v) if isinstance(v, str) else v)
 
           # DataFrame → Excel 워크북
           wb = Workbook()
