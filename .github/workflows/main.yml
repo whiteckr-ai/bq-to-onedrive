@@ -59,7 +59,7 @@ jobs:
             --location=asia-northeast3 \
             --nouse_legacy_sql \
             --format=csv \
-            --max_rows=1000000000 \
+            --max_rows=5 \
             < /tmp/query.sql | tee /tmp/export/bq_export.csv > /dev/null
 
       - name: Check CSV row count & size
