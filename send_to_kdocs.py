@@ -7,7 +7,7 @@ import os
 TOKEN = os.environ.get("KDOCS_TOKEN")
 FILE_ID = os.environ.get("KDOCS_FILE_ID")
 CSV_FILE = "result.csv"  # BigQuery에서 추출된 CSV 파일명
-SCRIPT_NAME = "ReceiveData"  # KDocs에 작성한 함수 이름
+SCRIPT_NAME = "V2-7ywFu9flguvfUNoAffFcws"  # KDocs에 작성한 함수 이름
 
 if not TOKEN or not FILE_ID:
     print("❌ 에러: 토큰이나 문서 ID가 설정되지 않았습니다.")
