@@ -80,7 +80,7 @@ jobs:
       - name: Send CSV Data to KDocs
         env:
           # 발급받은 스크립트 토큰과 문서 ID
-          KDOCS_TOKEN: "7i1UmJgwNz3l5HWuzQZh4Y"  
+          KDOCS_TOKEN: "1Vg353OyhzW3n27xfSZKUh"  
           KDOCS_FILE_ID: "cvViOvb7vj6x" 
         run: |
           # 추출된 CSV 파일을 파이썬 스크립트가 읽을 수 있도록 result.csv로 복사
