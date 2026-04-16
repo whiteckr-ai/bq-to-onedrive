@@ -4,7 +4,7 @@ import sys
 import os
 
 TOKEN = os.environ.get("KDOCS_TOKEN")
-FILE_ID = os.environ.get("KDOCS_FILE_ID")
+FILE_ID = os.environ.get("KDOCS_DB_FILE_ID")
 CSV_FILE = "result.csv"  
 
 # 💡 주의: 기존 일반 시트용 스크립트 이름과 달라야 합니다! 
