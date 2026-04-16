@@ -55,15 +55,25 @@ test_payload = {
 try:
     response = requests.post(API_URL, headers=headers, json=test_payload, timeout=30)
     
-    # 💡 KDocs가 뱉어내는 진짜 응답(에러 원인)을 무조건 출력하도록 강제합니다.
-    print(f"📩 진짜 응답 내용: {response.text}")
-    
-    if response.status_code == 200:
-        print("✅ 통신 완료 (위에 출력된 진짜 응답 내용을 꼭 확인하세요!)")
-    else:
-        print(f"⛔ KDocs DB 실패: {response.text}")
-        sys.exit(1)
+    # 💡 KDocs의 JSON 응답을 파싱해서 잘리지 않게 한 줄씩 출력합니다.
+    try:
+        resp_json = response.json()
+        logs = resp_json.get("data", {}).get("logs", [])
         
+        print("📩 [KDocs 상세 에러 추적 로그]")
+        for log in logs:
+            if isinstance(log, dict) and "args" in log:
+                print(f" ➔ {log['args'][0]}")
+                
+        if response.status_code == 200:
+            print("✅ 통신은 완료되었습니다. (위의 ➔ 로그에서 에러 원인을 확인하세요)")
+        else:
+            print(f"⛔ KDocs DB 실패: 상태코드 {response.status_code}")
+            sys.exit(1)
+            
+    except Exception as parse_e:
+        print(f"📩 원본 응답: {response.text}")
+
 except Exception as e:
     print(f"❌ DB 통신 에러: {e}")
     sys.exit(1)
