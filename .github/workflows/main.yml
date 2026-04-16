@@ -82,9 +82,14 @@ jobs:
           # 발급받은 스크립트 토큰과 문서 ID
           KDOCS_TOKEN: "1Vg353OyhzW3n27xfSZKUh"  
           KDOCS_FILE_ID: "cvViOvb7vj6x" 
+          KDOCS_DB_FILE_ID: "cnIgZYoMts1i"
+          
         run: |
           # 추출된 CSV 파일을 파이썬 스크립트가 읽을 수 있도록 result.csv로 복사
           cp /tmp/export/bq_export.csv result.csv
           
-          # KDocs 전송 파이썬 스크립트 실행
+          echo "1️⃣ 기존 일반 시트 업데이트"
           python send_to_kdocs.py
+          
+          echo "2️⃣ 신규 DB 시트 업데이트"
+          python send_to_kdocs_db.py
