@@ -6,7 +6,7 @@ import os
 # 1. GitHub Actions 환경 변수에서 값 가져오기
 TOKEN = os.environ.get("KDOCS_TOKEN")
 FILE_ID = os.environ.get("KDOCS_FILE_ID")
-CSV_FILE = "result.csv"  # BigQuery에서 추출된 CSV 파일명
+CSV_FILE = "result.csv"
 SCRIPT_NAME = "V2-7ywFu9flguvfUNoAffFcws"  # KDocs에 작성한 함수 이름
 
 if not TOKEN or not FILE_ID:
