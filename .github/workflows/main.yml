@@ -3,7 +3,7 @@ name: bq-to-kdocs
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "45 * * * *"   # UTC 기준
+    - cron: "45 * * * *"   # UTC 기준 (한국시간 오전 10:45)
 
 jobs:
   export-and-upload:
@@ -25,13 +25,11 @@ jobs:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
           install_components: bq
 
-      # 진단 (문제 발생 시 유용)
+      # 진단
       - name: Check gcloud/bq
         run: |
           gcloud --version
           bq version
-          gcloud auth list
-          gcloud config list
 
       # 스모크 테스트
       - name: Smoke test - SELECT 1
@@ -70,38 +68,26 @@ jobs:
           echo "Head:"; head -n 5 /tmp/export/bq_export.csv || true
 
       # =========================================================
-      # 4) KDocs 연동
+      # 4) KDocs 일반 AirSheet 업데이트 (DB는 제거)
       # =========================================================
 
       - name: Install Python dependencies
         run: pip install --quiet requests
 
-      - name: Send CSV Data to KDocs
+      - name: Send CSV Data to KDocs AirSheet
         env:
-          # KDocs 관련 설정 (직접 기재)
-          KDOCS_TOKEN: "1Vg353OyhzW3n27xfSZKUh"
+          KDOCS_TOKEN: "1Vg353OyhzW3n27xfSZKUh"     # ← 필요시 Secrets로 이동 추천
           KDOCS_FILE_ID: "cvViOvb7vj6x"
-          KDOCS_DB_FILE_ID: "cnIgZYoMts1i"
           
         run: |
           cp /tmp/export/bq_export.csv result.csv
           
           echo "========================================"
-          echo "1️⃣ 일반 AirSheet 업데이트 시작"
+          echo "1️⃣ KDocs 일반 AirSheet 업데이트 시작"
           echo "========================================"
-          KDOCS_TARGET_FILE_ID=${{ env.KDOCS_FILE_ID }} \
+          KDOCS_FILE_ID=${{ env.KDOCS_FILE_ID }} \
           KDOCS_SCRIPT_NAME="V2-7ywFu9flguvfUNoAffFcws" \
-          KDOCS_MODE="sheet" \
           python send_to_kdocs.py
           
           echo ""
-          echo "========================================"
-          echo "2️⃣ KDocs DB 업데이트 시작"
-          echo "========================================"
-          KDOCS_TARGET_FILE_ID=${{ env.KDOCS_DB_FILE_ID }} \
-          KDOCS_SCRIPT_NAME="V2-5vnUpdVQGXoWN9loeiAx39" \
-          KDOCS_MODE="db" \
-          python send_to_kdocs.py
-          
-          echo ""
-          echo "🎉 모든 KDocs 업데이트 작업 완료!"
+          echo "🎉 KDocs AirSheet 업데이트 작업 완료!"
