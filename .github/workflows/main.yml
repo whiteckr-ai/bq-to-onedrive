@@ -3,7 +3,7 @@ name: bq-to-kdocs
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "45 * * * *"   # UTC 기준, 필요시 조정
+    - cron: "45 * * * *"   # UTC 기준
 
 jobs:
   export-and-upload:
@@ -25,7 +25,7 @@ jobs:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
           install_components: bq
 
-      # (선택) 진단
+      # 진단 (문제 발생 시 유용)
       - name: Check gcloud/bq
         run: |
           gcloud --version
@@ -33,7 +33,7 @@ jobs:
           gcloud auth list
           gcloud config list
 
-      # (선택) 스모크 테스트
+      # 스모크 테스트
       - name: Smoke test - SELECT 1
         run: |
           bq query \
@@ -44,7 +44,7 @@ jobs:
             "SELECT 1 AS ok"
 
       # 3) BigQuery → CSV 추출
-      - name: Export BigQuery result to CSV (robust)
+      - name: Export BigQuery result to CSV
         env:
           BQ_SQL: ${{ secrets.BQ_SQL }}
         run: |
@@ -67,11 +67,10 @@ jobs:
           ls -l /tmp/export/bq_export.csv || true
           echo "Line count (including header):"
           wc -l /tmp/export/bq_export.csv || true
-          echo "Head:"; head -n 3 /tmp/export/bq_export.csv || true
-          echo "Tail:"; tail -n 3 /tmp/export/bq_export.csv || true
+          echo "Head:"; head -n 5 /tmp/export/bq_export.csv || true
 
       # =========================================================
-      # 4) KDocs 연동 시작 (여기서부터 새로 추가된 부분)
+      # 4) KDocs 연동
       # =========================================================
 
       - name: Install Python dependencies
@@ -79,17 +78,30 @@ jobs:
 
       - name: Send CSV Data to KDocs
         env:
-          # 발급받은 스크립트 토큰과 문서 ID
-          KDOCS_TOKEN: "1Vg353OyhzW3n27xfSZKUh"  
-          KDOCS_FILE_ID: "cvViOvb7vj6x" 
+          # KDocs 관련 설정 (직접 기재)
+          KDOCS_TOKEN: "1Vg353OyhzW3n27xfSZKUh"
+          KDOCS_FILE_ID: "cvViOvb7vj6x"
           KDOCS_DB_FILE_ID: "cnIgZYoMts1i"
           
         run: |
-          # 추출된 CSV 파일을 파이썬 스크립트가 읽을 수 있도록 result.csv로 복사
           cp /tmp/export/bq_export.csv result.csv
           
-          echo "1️⃣ 기존 일반 시트 업데이트"
+          echo "========================================"
+          echo "1️⃣ 일반 AirSheet 업데이트 시작"
+          echo "========================================"
+          KDOCS_TARGET_FILE_ID=${{ env.KDOCS_FILE_ID }} \
+          KDOCS_SCRIPT_NAME="V2-7ywFu9flguvfUNoAffFcws" \
+          KDOCS_MODE="sheet" \
           python send_to_kdocs.py
           
-          echo "2️⃣ 신규 DB 시트 업데이트"
-          python send_to_kdocs_db.py
+          echo ""
+          echo "========================================"
+          echo "2️⃣ KDocs DB 업데이트 시작"
+          echo "========================================"
+          KDOCS_TARGET_FILE_ID=${{ env.KDOCS_DB_FILE_ID }} \
+          KDOCS_SCRIPT_NAME="V2-5vnUpdVQGXoWN9loeiAx39" \
+          KDOCS_MODE="db" \
+          python send_to_kdocs.py
+          
+          echo ""
+          echo "🎉 모든 KDocs 업데이트 작업 완료!"
