@@ -76,8 +76,9 @@ jobs:
 
       - name: Send CSV Data to KDocs AirSheet
         env:
-          KDOCS_TOKEN: "1Vg353OyhzW3n27xfSZKUh"     # ← 필요시 Secrets로 이동 추천
-          KDOCS_FILE_ID: "cvViOvb7vj6x"
+          KDOCS_TOKEN: "1Vg353OyhzW3n27xfSZKUh"
+          KDOCS_TARGET_FILE_ID: "cvViOvb7vj6x"      # ← 여기서 TARGET_ 로 맞춰주기
+          KDOCS_SCRIPT_NAME: "V2-7ywFu9flguvfUNoAffFcws"
           
         run: |
           cp /tmp/export/bq_export.csv result.csv
@@ -85,8 +86,7 @@ jobs:
           echo "========================================"
           echo "1️⃣ KDocs 일반 AirSheet 업데이트 시작"
           echo "========================================"
-          KDOCS_FILE_ID=${{ env.KDOCS_FILE_ID }} \
-          KDOCS_SCRIPT_NAME="V2-7ywFu9flguvfUNoAffFcws" \
+          
           python send_to_kdocs.py
           
           echo ""
